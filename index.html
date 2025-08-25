@@ -316,11 +316,9 @@
         function handleUndo() {
             if (gameOver || currentPlayer !== PLAYER || moveHistory.length === 0) return;
             
-            // Find the last move made by the player
             const lastPlayerMoveIndex = moveHistory.map(m => m.player).lastIndexOf(PLAYER);
-            if (lastPlayerMoveIndex === -1) return; // No player move to undo
+            if (lastPlayerMoveIndex === -1) return;
 
-            // Determine how many moves to pop (1 if player was last, 2 if AI was last)
             const movesToUndo = moveHistory.length - lastPlayerMoveIndex;
 
             for (let i = 0; i < movesToUndo; i++) {
@@ -355,6 +353,8 @@
                 }
                 switchPlayer();
             } else {
+                // NOTE: With the hyper-aggressive AI, this 'draw' state should theoretically
+                // never be reached, as the AI is designed to force a win before the board fills up.
                 endGame(null); // Draw
             }
         }
@@ -415,14 +415,20 @@
             const emptyCount = window.filter(p => p === 0).length;
             const opponentCount = window.filter(p => p === opponent).length;
 
-            if (opponentCount > 0) return 0;
+            if (opponentCount > 0) return 0; // A blocked line is worthless.
 
-            if (playerCount === 4) score += 100000;
-            else if (playerCount === 3) score += 1000;
-            else if (playerCount === 2) score += 100;
-            
-            if (emptyCount === 2 && playerCount === 3) score += 2000;
-            if (emptyCount === 3 && playerCount === 2) score += 200;
+            // New hyper-aggressive scoring to force a win and prevent draws.
+            if (playerCount === 4) {
+                score += 1000000; // This is a winning move, give it a massive score.
+            } else if (playerCount === 3 && emptyCount === 2) {
+                score += 50000;   // An "open three" is a huge threat that often leads to a win.
+            } else if (playerCount === 3) {
+                score += 1000;    // A regular three-in-a-row.
+            } else if (playerCount === 2 && emptyCount === 3) {
+                score += 500;     // An "open two" is a good setup for future threats.
+            } else if (playerCount === 2) {
+                score += 100;     // A regular two-in-a-row.
+            }
 
             return score;
         }
